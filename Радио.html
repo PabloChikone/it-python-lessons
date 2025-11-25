@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Интернет-радио</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f0f0f0;
+      margin: 0;
+    }
+    .radio-btn {
+      display: block;
+      width: 90%;
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 25px;
+      font-size: 32px;               /* Увеличенный шрифт */
+      font-weight: bold;
+      border: 3px solid #333;        /* Чёткая рамка */
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background-color 0.3s, border-color 0.3s;
+      background-color: #fff;        /* Белый фон по умолчанию */
+      color: #333;
+    }
+
+    .radio-btn.playing {
+      background-color: #4caf50;
+      color: white;
+      border-color: #388e3c;
+    }
+
+    .radio-btn.paused {
+      background-color: #f44336;
+      color: white;
+      border-color: #d32f2f;
+    }
+
+    h1 {
+      font-size: 36px;
+      margin-top: 20px;
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Интернет-радио</h1>
+
+<button class="radio-btn" data-url="https://rusradio.hostingradio.ru/rusradio128.mp3">Русское радио</button>
+<button class="radio-btn" data-url="http://hls-01-retro.emgsound.ru/12/128/playlist.m3u8">Ретро FM</button>
+<button class="radio-btn" data-url="http://78.140.208.20:8801/pfm_spb">Питер FM</button>
+
+<audio id="radio-player" preload="none"></audio>
+
+<script>
+  const player = document.getElementById('radio-player');
+  const buttons = document.querySelectorAll('.radio-btn');
+  let currentButton = null;
+  let hlsInstance = null;
+
+  function stopAll() {
+    player.pause();
+    if (currentButton) {
+      currentButton.classList.remove('playing');
+      currentButton.classList.add('paused');
+    }
+    // Освободить HLS, если был
+    if (hlsInstance) {
+      hlsInstance.destroy();
+      hlsInstance = null;
+    }
+  }
+
+  function playRadio(url, button) {
+    // Если нажали на ту же кнопку — остановить
+    if (currentButton === button && !player.paused) {
+      stopAll();
+      return;
+    }
+
+    stopAll();
+
+    // Установить источник в зависимости от формата
+    if (url.endsWith('.m3u8')) {
+      if (Hls.isSupported()) {
+        hlsInstance = new Hls();
+        hlsInstance.loadSource(url);
+        hlsInstance.attachMedia(player);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+          player.play().catch(e => console.warn('Не удалось запустить:', e));
+        });
+      } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari поддерживает HLS нативно
+        player.src = url;
+        player.play().catch(e => console.warn('Не удалось запустить:', e));
+      } else {
+        alert('HLS не поддерживается в этом браузере');
+        return;
+      }
+    } else {
+      // Обычный аудиопоток (MP3, ICY и т.п.)
+      player.src = url;
+      player.play().catch(e => console.warn('Не удалось запустить:', e));
+    }
+
+    currentButton = button;
+    button.classList.remove('paused');
+    button.classList.add('playing');
+  }
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const url = btn.getAttribute('data-url');
+      playRadio(url, btn);
+    });
+  });
+</script>
+
+</body>
+</html>
